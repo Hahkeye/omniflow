@@ -1,0 +1,17 @@
+# NVIDIA backend (Linux/Windows + CUDA)
+nemo-toolkit[asr] @ git+https://github.com/NVIDIA/NeMo.git@main
+
+# Mac/CPU fallback
+openai-whisper
+pyannote.audio
+torch
+
+# MOSS-Transcribe-Diarize backend (ASR + diarization)
+moss-transcribe-diarize
+
+# Common dependencies
+sounddevice
+numpy
+rich
+tqdm
+pydantic

@@ -1,0 +1,4 @@
+{
+  "identifier": "main",
+  "permissions": ["shell:allow-open"]
+}

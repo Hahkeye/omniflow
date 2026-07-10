@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Node.js
+node_modules/
+dist/
+
+# Rust/Tauri
+target/
+Cargo.lock
+!Cargo.lock
+
+# Tauri build artifacts
+src-tauri/target/
+src-tauri/src-tauri/target/
+
+# Large binary files
+*.exe
+*.AppImage
+*.deb
+*.rpm
+*.wav
+*.mp3
+*.flac
+*.ogg
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# WSL
+.mypy_cache/
+
+# Temp files
+/tmp/
+diary/tmp/
