@@ -4,7 +4,7 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
-from .device import resolve_torch_device, detect_hardware, format_detect_report
+from .device import resolve_torch_device, detect_hardware
 from .transcribe import BaseTranscriptionBackend, Transcript, SpeakerSegment
 
 _HAS_MOSS = False

@@ -1,7 +1,7 @@
 """Backend and analyzer registries (plugin-style)."""
 from __future__ import annotations
 
-from typing import Any, Callable, Type
+from typing import Any, Callable
 
 from diary_app.config import get_config
 from diary_app.core.logutil import get_logger

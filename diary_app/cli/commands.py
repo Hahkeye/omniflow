@@ -12,13 +12,12 @@ from pathlib import Path
 
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from diary_app.core.audio import AudioConfig
 from diary_app.core.transcribe import Transcript, KeyPoints
 from diary_app.core.analyzer import TranscriptAnalyzer
-from diary_app.core.logutil import ensure_logging, get_logger
-from diary_app.config import load_config, get_config, write_example_config
+from diary_app.core.logutil import get_logger
+from diary_app.config import get_config, write_example_config
 from diary_app.cli import handlers as cli_handlers
 
 console = Console()
@@ -27,13 +26,6 @@ log = get_logger("cli")
 # Updated each process start from AppConfig in main()
 DIARY_DIR = Path.home() / "diary"
 BACKEND_CHOICES = ("auto", "moss", "whisper", "nemo")
-
-def _lazy_backends():
-    """Import backends lazily so missing optional deps don't break --help."""
-    from diary_app.core.moss_backend import MossBackend
-    from diary_app.core.whisper_backend import WhisperBackend
-    from diary_app.core.nemo_backend import NeMoBackend
-    return MossBackend, WhisperBackend, NeMoBackend
 
 
 def resolve_output_path(output: str | Path | None, default_name: str) -> Path:
@@ -48,62 +40,6 @@ def resolve_output_path(output: str | Path | None, default_name: str) -> Path:
             path = path / default_name
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
-
-
-def _device_arg(args) -> str:
-    """Resolve --device CLI flag (default auto = CUDA → MPS → CPU)."""
-    return getattr(args, "device", None) or "auto"
-
-
-def get_backend(args, max_speakers: int = 4):
-    """Choose the appropriate transcription backend based on args."""
-    MossBackend, WhisperBackend, NeMoBackend = _lazy_backends()
-    backend = getattr(args, "backend", "auto") or "auto"
-    use_mps = bool(getattr(args, "mps", False))
-    device = _device_arg(args)
-
-    # Print detection once before loading heavy models
-    try:
-        from diary_app.core.device import format_detect_report, resolve_torch_device
-        console.print(Panel(format_detect_report(), title="GPU / device detection", style="cyan"))
-        resolved = resolve_torch_device(device)
-        console.print(f"[green]Selected device:[/] {resolved.details}")
-    except Exception as e:
-        console.print(f"[yellow]Device probe skipped: {e}[/]")
-
-    if backend == "moss":
-        return MossBackend(max_speakers=max_speakers, device=device)
-    if backend == "whisper":
-        model_size = "medium" if use_mps or device in ("mps", "cuda") else "small"
-        return WhisperBackend(model_size=model_size, max_speakers=max_speakers, device=device)
-    if backend == "nemo":
-        return NeMoBackend(max_speakers=max_speakers)
-
-    # auto: moss (Mac+PC unified) → whisper → nemo
-    errors: list[str] = []
-    try:
-        return MossBackend(max_speakers=max_speakers, device=device)
-    except Exception as e:
-        errors.append(f"moss: {e}")
-        console.print("[yellow]Moss not available, trying whisper...[/]")
-    try:
-        model_size = "medium" if use_mps or device in ("mps", "cuda") else "small"
-        return WhisperBackend(model_size=model_size, max_speakers=max_speakers, device=device)
-    except Exception as e:
-        errors.append(f"whisper: {e}")
-        console.print("[yellow]Whisper not available, trying NeMo...[/]")
-    try:
-        return NeMoBackend(max_speakers=max_speakers)
-    except Exception as e:
-        errors.append(f"nemo: {e}")
-        console.print("[red]No transcription backend available.[/]")
-        for err in errors:
-            console.print(f"  [dim]- {err}[/]")
-        console.print(
-            "\nInstall the default backend:\n"
-            "  pip install -r diary_app/requirements.txt"
-        )
-        sys.exit(1)
 
 
 def do_record(args: argparse.Namespace) -> Path:
@@ -355,7 +291,6 @@ def do_history(args: argparse.Namespace) -> None:
         parse_rename_pairs,
         display_speakers_for_entry,
         raw_labels_from_transcript_data,
-        resolve_display_map,
         SpeakerStore,
     )
 
@@ -911,7 +846,7 @@ def do_config(args: argparse.Namespace) -> None:
         console.print(f"[green]✓ Wrote example config to {path}[/green]")
         return
     if action == "path":
-        from .config import _default_config_paths
+        from diary_app.config import _default_config_paths
 
         for p in _default_config_paths():
             mark = " (exists)" if p.is_file() else ""

@@ -11,25 +11,8 @@ __all__ = [
     "SpeakerSegment",
     "Transcript",
     "KeyPoints",
-    "TranscriptionBackend",
     "BaseTranscriptionBackend",
 ]
-
-
-class TranscriptionBackend:
-    """Legacy Protocol-like base (duck typing). Prefer domain.ports.TranscriptionBackend."""
-
-    name: str
-    description: str
-
-    def transcribe(self, wav_path: Path) -> Transcript:
-        raise NotImplementedError
-
-    def get_speaker_ids(self) -> list[str]:
-        raise NotImplementedError
-
-    def warmup(self) -> None:
-        return None
 
 
 class BaseTranscriptionBackend(ABC):

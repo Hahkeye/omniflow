@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from collections import defaultdict
 from dataclasses import dataclass, field, asdict
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +13,6 @@ from .history import (
     DiaryEntry,
     list_entries,
     load_analysis_data,
-    load_transcript_data,
 )
 
 

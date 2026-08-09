@@ -10,7 +10,7 @@ from typing import Any
 
 from diary_app.config import get_config
 from diary_app.core import history as history_mod
-from diary_app.core.index_db import rebuild_index, search_ids, upsert_entry
+from diary_app.core.index_db import rebuild_index, search_ids
 from diary_app.core.logutil import get_logger
 
 log = get_logger("store")

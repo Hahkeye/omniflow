@@ -5,7 +5,6 @@ This UI is kept for quick browser demos; new features land on the daemon/API fir
 """
 from __future__ import annotations
 
-import json
 from datetime import datetime
 from pathlib import Path
 
@@ -28,7 +27,6 @@ from ..core.history import (
     format_entry_summary,
 )
 from ..core.speakers import (
-    SpeakerStore,
     get_entry_speaker_map,
     set_entry_speaker_map,
     parse_rename_pairs,
@@ -40,7 +38,7 @@ from ..core.speakers import (
 from ..core.search import search_diary, get_entry_segments
 from ..core.export import export_entry
 from ..core.digest import digests_for_api, write_digest
-from ..core.annotate import update_entry_annotation, list_all_tags
+from ..core.annotate import update_entry_annotation
 from ..core.actions import ActionInbox, inbox_for_api
 
 DIARY_DIR = DEFAULT_DIARY_DIR

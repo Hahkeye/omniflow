@@ -254,22 +254,6 @@ def resolve_display_map(
     return out
 
 
-def apply_map_to_segments(segments: list[dict], display_map: dict[str, str]) -> list[dict]:
-    """Return new segment dicts with speaker display names (keeps original_speaker)."""
-    out = []
-    for seg in segments:
-        if not isinstance(seg, dict):
-            continue
-        new_seg = dict(seg)
-        raw = str(seg.get("speaker") or "?")
-        key = normalize_label(raw)
-        display = display_map.get(raw) or display_map.get(key) or raw
-        new_seg["original_speaker"] = seg.get("original_speaker") or raw
-        new_seg["speaker"] = display
-        out.append(new_seg)
-    return out
-
-
 def get_entry_speaker_map(entry: DiaryEntry, diary_dir: Path | None = None) -> dict[str, str]:
     """Load speaker_map from entry index file and/or transcript meta."""
     mapping: dict[str, str] = {}

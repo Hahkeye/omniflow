@@ -10,7 +10,7 @@ from pathlib import Path
 
 from diary_app.config import load_config
 from diary_app.core.logutil import ensure_logging
-from diary_app.cli.commands import DIARY_DIR, get_command_handlers
+from diary_app.cli.commands import get_command_handlers
 from diary_app.cli.parser import build_parser
 
 

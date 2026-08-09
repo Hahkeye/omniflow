@@ -7,7 +7,6 @@ from .pipeline import (
     run_session,
     transcribe_file,
 )
-from .session import SessionService
 
 __all__ = [
     "PipelineResult",
@@ -15,5 +14,4 @@ __all__ = [
     "transcribe_file",
     "analyze_transcript",
     "run_session",
-    "SessionService",
 ]

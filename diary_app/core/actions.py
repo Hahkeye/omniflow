@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .history import DEFAULT_DIARY_DIR, list_entries, load_analysis_data, get_entry
+from .history import DEFAULT_DIARY_DIR, list_entries, load_analysis_data
 
 ACTIONS_FILE = "actions.json"
 

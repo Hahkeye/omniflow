@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 from typing import Any, Callable
 
-from .logutil import ensure_logging, emit_progress, get_logger
+from .logutil import ensure_logging, get_logger
 
 log = get_logger("api")
 

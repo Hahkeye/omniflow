@@ -25,7 +25,6 @@ import json
 import os
 import secrets
 import signal
-import socket
 import socketserver
 import sys
 import threading

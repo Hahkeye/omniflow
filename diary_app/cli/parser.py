@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 
-from diary_app.cli.commands import BACKEND_CHOICES, _add_backend_args
+from diary_app.cli.commands import _add_backend_args
 
 
 def build_parser() -> argparse.ArgumentParser:

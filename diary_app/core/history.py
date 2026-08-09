@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 import re
 import secrets
-import shutil
 import wave
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
@@ -317,7 +316,7 @@ def save_entry_bundle(
     # Suggest speaker names from remembered defaults (cross-session memory)
     speaker_map: dict[str, str] = {}
     try:
-        from .speakers import SpeakerStore, raw_labels_from_transcript_data, resolve_display_map
+        from .speakers import SpeakerStore
 
         store = SpeakerStore.load(diary_dir)
         raw_labels = []
