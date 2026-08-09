@@ -1,18 +1,15 @@
 """Gradio UI for the Diary Transcript app — record, transcribe, history.
 
 **Secondary surface:** the product path is CLI + local daemon + Tauri.
-This UI is kept for quick browser demos; new features land on the daemon/API first.
+This UI is kept for quick browser demos; STT goes through SessionService
+(same path as CLI/API), not direct backend imports.
 """
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 
 import gradio as gr
 
-from ..core.audio import AudioConfig
-from ..core.analyzer import TranscriptAnalyzer
-from ..core.transcribe import BaseTranscriptionBackend
 from ..config import load_config
 
 load_config()
@@ -23,7 +20,6 @@ from ..core.history import (
     load_transcript_data,
     load_analysis_data,
     format_transcript_text,
-    save_entry_bundle,
     format_entry_summary,
 )
 from ..core.speakers import (
@@ -40,160 +36,72 @@ from ..core.export import export_entry
 from ..core.digest import digests_for_api, write_digest
 from ..core.annotate import update_entry_annotation
 from ..core.actions import ActionInbox, inbox_for_api
+from ..services.session import (
+    format_key_points_markdown,
+    format_transcript_lines,
+    get_session_service,
+)
 
 DIARY_DIR = DEFAULT_DIARY_DIR
 DIARY_DIR.mkdir(parents=True, exist_ok=True)
 
-_backend: BaseTranscriptionBackend | None = None
-_backend_type: str = "moss"
-_backend_size: str = "medium"
-_max_speakers: int = 4
-_backend_device: str = "auto"
-
-
-def _create_backend(backend_type: str, backend_size: str, max_speakers: int, device: str):
-    if backend_type == "moss":
-        from ..core.moss_backend import MossBackend
-        return MossBackend(warmup=True, max_speakers=max_speakers, device=device)
-    if backend_type == "nemo":
-        from ..core.nemo_backend import NeMoBackend
-        return NeMoBackend(warmup=True, max_speakers=max_speakers, model_size=backend_size)
-    from ..core.whisper_backend import WhisperBackend
-    return WhisperBackend(
-        model_size=backend_size,
-        warmup=True,
-        max_speakers=max_speakers,
-        device=device,
-    )
-
-
-def get_backend(backend_type: str, backend_size: str, max_speakers: int, device: str = "auto"):
-    global _backend, _backend_type, _backend_size, _max_speakers, _backend_device
-    if (
-        _backend is None
-        or backend_type != _backend_type
-        or backend_size != _backend_size
-        or max_speakers != _max_speakers
-        or device != _backend_device
-    ):
-        if _backend is not None:
-            try:
-                _backend.unload()
-            except Exception:
-                pass
-            _backend = None
-        try:
-            _backend = _create_backend(
-                backend_type, backend_size, int(max_speakers), device or "auto"
-            )
-            _backend_type = backend_type
-            _backend_size = backend_size
-            _max_speakers = int(max_speakers)
-            _backend_device = device or "auto"
-        except Exception as e:
-            return None, str(e)
-    return _backend, None
-
-
-def format_analysis(key_points_dict: dict) -> str:
-    if not key_points_dict:
-        return ""
-    lines: list[str] = []
-    if key_points_dict.get("summary"):
-        lines.append(f"## Summary\n{key_points_dict['summary']}")
-    if key_points_dict.get("decisions"):
-        lines.append("## Decisions")
-        for d in key_points_dict["decisions"]:
-            lines.append(f"✓ {d}")
-    if key_points_dict.get("action_items"):
-        lines.append("## Action items")
-        for a in key_points_dict["action_items"]:
-            lines.append(f"☐ {a}")
-    if key_points_dict.get("key_points"):
-        lines.append("## Key Points")
-        for i, kp in enumerate(key_points_dict["key_points"], 1):
-            lines.append(f"{i}. {kp}")
-    if key_points_dict.get("topics"):
-        lines.append("## Topics")
-        for t in key_points_dict["topics"]:
-            lines.append(f"• {t}")
-    if key_points_dict.get("takeaways"):
-        lines.append("## Takeaways")
-        for ta in key_points_dict["takeaways"]:
-            lines.append(f"• {ta}")
-    return "\n\n".join(lines)
+# Alias for any residual call sites / notebooks
+format_analysis = format_key_points_markdown
 
 
 def record_button_action(duration: float, sr: int):
+    """Record via SessionService / pipeline (sample rate is fixed at 16 kHz)."""
+    del sr  # AudioConfig in pipeline is 16 kHz mono
     try:
-        config = AudioConfig(
-            sample_rate=int(sr),
-            channels=1,
-            max_duration=int(duration),
-        )
-        audio = config.record(duration=float(duration), progress_callback=None)
-        if audio.size > 0:
-            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-            wav_path = DIARY_DIR / f"recording_{ts}.wav"
-            config.save_wav(audio, wav_path)
-            return str(wav_path), "Recording saved successfully."
-        return None, "Recording failed."
+        svc = get_session_service()
+        wav = svc.record(duration=float(duration), diary_dir=DIARY_DIR)
+        return str(wav), "Recording saved successfully."
     except Exception as e:
         return None, f"Recording error: {e}"
 
 
 def transcribe_button_action(wav_file, backend_type, backend_size, max_speakers, device="auto"):
+    """Transcribe via SessionService (registry backends + warm cache)."""
     wav_path = Path(wav_file) if wav_file else None
     if not wav_path or not Path(wav_path).exists():
         return "", "No audio file selected.", "", ""
 
-    try:
-        backend, err = get_backend(
-            backend_type, backend_size, int(max_speakers), device=device or "auto"
-        )
-        if not backend:
-            return "", err or "Backend failed to load", "", ""
+    svc = get_session_service()
+    model_size = backend_size if (backend_type or "").lower() == "whisper" else None
+    result = svc.run(
+        audio_path=wav_path,
+        backend=backend_type or "moss",
+        device=device or "auto",
+        diary_dir=DIARY_DIR,
+        max_speakers=int(max_speakers) if max_speakers is not None else None,
+        model_size=model_size,
+        use_cache=True,
+    )
+    if not result.ok:
+        return "", f"Transcription error: {result.error}", "", ""
 
-        transcript = backend.transcribe(Path(wav_path))
-        if not transcript.segments:
-            return "No speech detected in the audio.", "", "", ""
+    segs = (result.transcript or {}).get("segments") or []
+    if not segs:
+        return "No speech detected in the audio.", "", "", ""
 
-        lines = [
-            f"[{seg.speaker}] ({seg.start_time:.1f}s - {seg.end_time:.1f}s): {seg.text}"
-            for seg in transcript.segments
-        ]
-        transcript_text = "\n".join(lines)
-
-        analyzer = TranscriptAnalyzer()
-        key_points = analyzer.analyze(transcript)
-        kp_dict = key_points.to_json()
-        analysis_text = format_analysis(kp_dict)
-
-        entry = save_entry_bundle(
-            transcript,
-            key_points,
-            audio_path=wav_path,
-            diary_dir=DIARY_DIR,
-            backend=backend_type,
-            device=device,
-        )
-
-        return (
-            transcript_text,
-            analysis_text,
-            entry.transcript_path or "",
-            entry.analysis_path or "",
-        )
-
-    except Exception as e:
-        return "", f"Transcription error: {e}", "", ""
+    transcript_text = format_transcript_lines(result.transcript)
+    analysis_text = format_key_points_markdown(result.key_points)
+    return (
+        transcript_text,
+        analysis_text,
+        result.transcript_path or "",
+        result.analysis_path or "",
+    )
 
 
 def load_latest_action(backend_type, backend_size, max_speakers, device="auto"):
     recordings = sorted(
-        list(DIARY_DIR.glob("recording_*.wav")) + list((DIARY_DIR / "tmp").glob("recording_*.wav"))
-        if (DIARY_DIR / "tmp").exists()
-        else list(DIARY_DIR.glob("recording_*.wav")),
+        list(DIARY_DIR.glob("recording_*.wav"))
+        + (
+            list((DIARY_DIR / "tmp").glob("recording_*.wav"))
+            if (DIARY_DIR / "tmp").exists()
+            else []
+        ),
         key=lambda p: p.stat().st_mtime,
         reverse=True,
     )

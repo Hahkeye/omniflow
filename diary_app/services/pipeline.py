@@ -99,11 +99,14 @@ def transcribe_file(
     backend: str | None = None,
     device: str | None = None,
     max_speakers: int | None = None,
+    model_size: str | None = None,
+    backend_instance: Any | None = None,
 ) -> tuple[Transcript, str, str]:
     """
     Step: audio → Transcript.
 
     Returns (transcript, backend_name, device_label).
+    Pass backend_instance to reuse a warm model (Gradio / daemon).
     """
     cfg = get_config()
     wav = Path(wav_path).expanduser().resolve()
@@ -118,7 +121,15 @@ def transcribe_file(
     if is_cancelled():
         raise CancelledError()
 
-    be = create_backend(backend_name, device=device, max_speakers=max_speakers)
+    if backend_instance is not None:
+        be = backend_instance
+    else:
+        be = create_backend(
+            backend_name,
+            device=device,
+            max_speakers=max_speakers,
+            model_size=model_size,
+        )
     resolved_name = getattr(be, "name", backend_name) or backend_name
 
     emit_progress("transcribe", 0.2, f"Transcribing {wav.name}")
@@ -211,11 +222,15 @@ def run_session(
     persist: bool = True,
     sync_action_inbox: bool = True,
     silence_stop: bool = False,
+    max_speakers: int | None = None,
+    model_size: str | None = None,
+    backend_instance: Any | None = None,
 ) -> PipelineResult:
     """
     Full pipeline orchestration.
 
     Provide audio_path *or* record_duration (to record first).
+    Pass backend_instance to reuse a warm model without reloading.
     """
     cfg = get_config()
     root = Path(diary_dir) if diary_dir else Path(cfg.diary_dir)
@@ -233,7 +248,12 @@ def run_session(
             )
 
         transcript, backend_name, device_label = transcribe_file(
-            wav, backend=backend, device=device
+            wav,
+            backend=backend,
+            device=device,
+            max_speakers=max_speakers,
+            model_size=model_size,
+            backend_instance=backend_instance,
         )
         kp: KeyPoints | None = None
         if analyze:

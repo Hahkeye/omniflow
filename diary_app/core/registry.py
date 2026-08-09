@@ -74,33 +74,47 @@ def create_backend(
     *,
     device: str | None = None,
     max_speakers: int | None = None,
+    model_size: str | None = None,
+    warmup: bool = True,
     **kwargs: Any,
 ) -> Any:
     """
     Instantiate a backend by name, or auto-try configured order.
 
     name: auto | moss | whisper | nemo | None (→ config.default_backend)
+
+    model_size is used by Whisper; ignored by backends that don't accept it.
     """
     _ensure_builtins()
     cfg = get_config()
     name = (name or cfg.default_backend or "auto").lower()
     device = device or cfg.default_device
     max_speakers = max_speakers if max_speakers is not None else cfg.max_speakers
+    call_kwargs: dict[str, Any] = {"warmup": warmup, **kwargs}
+    if model_size is not None:
+        call_kwargs["model_size"] = model_size
 
     def _make(key: str):
         factory = _BACKENDS.get(key)
         if not factory:
             raise RuntimeError(f"Backend not available: {key}")
-        try:
-            return factory(max_speakers=max_speakers, device=device, **kwargs)
-        except TypeError:
+        # Peel kwargs until the constructor accepts the signature
+        attempts = [
+            dict(max_speakers=max_speakers, device=device, **call_kwargs),
+            dict(max_speakers=max_speakers, device=device, warmup=warmup),
+            dict(max_speakers=max_speakers, device=device),
+            dict(max_speakers=max_speakers, warmup=warmup),
+            dict(max_speakers=max_speakers),
+            {},
+        ]
+        last_err: Exception | None = None
+        for kw in attempts:
             try:
-                return factory(max_speakers=max_speakers, device=device)
-            except TypeError:
-                try:
-                    return factory(max_speakers=max_speakers)
-                except TypeError:
-                    return factory()
+                return factory(**kw)
+            except TypeError as e:
+                last_err = e
+                continue
+        raise RuntimeError(f"Could not construct backend {key}: {last_err}")
 
     if name != "auto":
         return _make(name)

@@ -1,7 +1,6 @@
 """Diary Transcript CLI entry — argparse + dispatch only.
 
-Command implementations live in diary_app.cli.commands.
-Session STT paths go through diary_app.services / cli.handlers.
+Command implementations live under diary_app.cli.* and call SessionService.
 """
 from __future__ import annotations
 
@@ -18,10 +17,10 @@ def main() -> None:
     """Main entry point."""
     ensure_logging()
     cfg = load_config()
-    # Keep module-level DIARY_DIR in sync for handlers that still use it
-    import diary_app.cli.commands as commands
+    # Keep CLI path defaults in sync with AppConfig
+    import diary_app.cli.common as cli_common
 
-    commands.DIARY_DIR = Path(cfg.diary_dir)
+    cli_common.DIARY_DIR = Path(cfg.diary_dir)
     cfg.ensure_dirs()
 
     # Fast path for API / serve (used by Tauri & desktop shell)

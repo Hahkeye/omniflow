@@ -220,16 +220,19 @@ omniflow/
 │   ├── config.py              # AppConfig (file + env + defaults)
 │   ├── domain/                # models + ports (no UI)
 │   ├── services/              # pipeline: record→transcribe→analyze→persist
-│   ├── cli/                   # thin CLI handlers → services
+│   ├── cli/                   # thin CLI (session/history/tools) → SessionService
+│   ├── services/
+│   │   ├── pipeline.py        # record → STT → analyze → persist
+│   │   └── session.py         # product facade + backend cache
 │   ├── core/
-│   │   ├── api.py             # JSON IPC → services
+│   │   ├── api.py             # JSON IPC → SessionService
 │   │   ├── daemon.py          # long-lived localhost daemon
 │   │   ├── store.py           # EntryStore (SQLite index + files)
 │   │   ├── registry.py        # backend / analyzer plugins
 │   │   ├── history.py         # file documents + index writes
-│   │   └── moss_backend.py    # default STT
+│   │   └── moss_backend.py    # default STT (via registry only)
 │   ├── main.py                # CLI entry + argparse
-│   └── ui/                    # Gradio (secondary / demos)
+│   └── ui/                    # Gradio (secondary; uses SessionService)
 ├── diary-frontend/            # Tauri client of the daemon
 ├── tests/
 └── pyproject.toml

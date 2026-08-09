@@ -271,14 +271,15 @@ def cmd_entry_delete(params: dict) -> dict:
 
 def cmd_record(params: dict) -> dict:
     """Record mic audio (fixed duration); returns wav_path."""
-    from diary_app.services.pipeline import record_audio
+    from diary_app.services.session import get_session_service
     from diary_app.core.logutil import CancelledError
 
     try:
-        wav = record_audio(
+        wav = get_session_service().record(
             duration=float(params.get("duration") or 30),
             diary_dir=_diary_dir(params),
             silence_stop=bool(params.get("silence_stop")),
+            device_id=params.get("device_id"),
         )
         return _ok(wav_path=str(wav), duration=float(params.get("duration") or 30))
     except CancelledError as e:
@@ -348,15 +349,16 @@ def cmd_record_status(params: dict) -> dict:
 
 
 def cmd_transcribe(params: dict) -> dict:
-    """Transcribe a file via session pipeline; returns entry_id and paths."""
-    from diary_app.services.pipeline import run_session
+    """Transcribe a file via SessionService (same path as CLI / Gradio)."""
+    from diary_app.services.session import get_session_service
     from diary_app.core.logutil import CancelledError
 
     audio_path = params.get("audio_path") or params.get("file")
     if not audio_path:
         return _err("audio_path required")
     try:
-        result = run_session(
+        svc = get_session_service()
+        result = svc.run(
             audio_path=audio_path,
             backend=params.get("backend"),
             device=params.get("device"),
@@ -364,6 +366,9 @@ def cmd_transcribe(params: dict) -> dict:
             analyze=params.get("analyze", True) is not False,
             persist=params.get("persist", True) is not False,
             sync_action_inbox=params.get("sync_actions", True) is not False,
+            max_speakers=params.get("max_speakers"),
+            model_size=params.get("model_size"),
+            use_cache=bool(params.get("use_cache")),
         )
         return result.to_api_dict()
     except CancelledError as e:
