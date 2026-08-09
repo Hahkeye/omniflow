@@ -1,0 +1,8 @@
+# Optional WhisperX backend (Mac/CPU/GPU fallback without MOSS)
+# Install on top of requirements.txt:
+#   pip install -r diary_app/requirements-whisper.txt
+
+openai-whisper
+whisperx
+# Diarization (optional; requires HF_TOKEN and accepting model terms):
+pyannote.audio

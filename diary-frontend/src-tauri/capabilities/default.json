@@ -1,4 +1,10 @@
 {
   "identifier": "main",
-  "permissions": ["shell:allow-open"]
+  "description": "Default capabilities for Diary",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "shell:allow-open",
+    "dialog:default"
+  ]
 }

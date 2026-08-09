@@ -2,21 +2,28 @@
 __pycache__/
 *.pyc
 *.pyo
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtualenv
+.venv/
+venv/
 
 # Node.js
 node_modules/
-dist/
+diary-frontend/dist/
 
-# Rust/Tauri
+# Rust/Tauri build (commit Cargo.lock for the app)
 target/
-Cargo.lock
-!Cargo.lock
+diary-frontend/src-tauri/target/
 
-# Tauri build artifacts
-src-tauri/target/
-src-tauri/src-tauri/target/
-
-# Large binary files
+# Large binary files / sample audio
 *.exe
 *.AppImage
 *.deb
@@ -26,20 +33,18 @@ src-tauri/src-tauri/target/
 *.flac
 *.ogg
 
-# OS files
+# OS / IDE
 .DS_Store
 Thumbs.db
-
-# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# WSL
-.mypy_cache/
-
-# Temp files
-/tmp/
+# Local diary data (if ever created inside repo)
+/diary/
 diary/tmp/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal

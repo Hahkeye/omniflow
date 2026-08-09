@@ -1,0 +1,7 @@
+# Optional NeMo multitalker backend (Linux/Windows + NVIDIA CUDA only)
+# Install on top of requirements.txt:
+#   pip install -r diary_app/requirements-nemo.txt
+#
+# Not supported on Mac. Prefer the default moss backend for Mac + PC.
+
+nemo-toolkit[asr] @ git+https://github.com/NVIDIA/NeMo.git@main

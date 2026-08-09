@@ -1,0 +1,23 @@
+# Platform-agnostic Python deps (NO torch/torchaudio).
+# Install torch first via diary_app/setup_venv.sh or:
+#   python -m diary_app.install_torch
+#
+# Then:
+#   pip install -r diary_app/requirements-core.txt
+#   pip install -e ".[dev]" --no-deps   # optional editable + scripts
+# or simply: pip install -e ".[dev]" after torch (pyproject does not pin torch)
+
+transformers>=4.49.0,<5
+soundfile>=0.12.0
+librosa>=0.10.0
+numpy>=1.26.0
+sounddevice>=0.5.0
+rich>=13.0.0
+tqdm>=4.66.0
+pydantic>=2.0.0
+av>=12.0.0
+safetensors>=0.4.0
+cryptography>=42.0.0
+
+# Official package pinned to a known commit (do NOT editable-install under /tmp)
+moss-transcribe-diarize @ git+https://github.com/OpenMOSS/MOSS-Transcribe-Diarize.git@0e3d1403fd8f1f1c674e883ece96b9f630794ebe

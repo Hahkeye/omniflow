@@ -1,0 +1,5 @@
+# Optional Gradio web UI
+#   pip install -r diary_app/requirements-ui.txt
+#   python -m diary_app.ui.app
+
+gradio>=4.0.0

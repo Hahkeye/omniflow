@@ -1,1 +1,1 @@
-{"main":{"identifier":"main","description":"","local":true,"permissions":["shell:allow-open"]}}
+{"main":{"identifier":"main","description":"Default capabilities for Diary","local":true,"windows":["main"],"permissions":["core:default","shell:allow-open","dialog:default"]}}

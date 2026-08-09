@@ -1,17 +1,25 @@
-# NVIDIA backend (Linux/Windows + CUDA)
-nemo-toolkit[asr] @ git+https://github.com/NVIDIA/NeMo.git@main
+# Default install for Mac + PC — multi-architecture notes:
+#
+# RECOMMENDED (handles CUDA/CPU/MPS + x86_64/arm64):
+#   bash diary_app/setup_venv.sh
+#   # Windows PowerShell:
+#   .\diary_app\install.ps1
+#
+# Manual two-step (required if you care about CUDA on Linux/Windows):
+#   python -m diary_app.install_torch          # arch-correct torch wheels
+#   pip install -r diary_app/requirements-core.txt
+#   # or: pip install -e ".[dev]"
+#
+# Do NOT `pip install torch` from PyPI on Linux NVIDIA machines — that often
+# pulls a CPU-only wheel and hides your GPU. Use install_torch / setup_venv.sh.
+#
+# Overrides:
+#   OMNIFLOW_TORCH=cpu|cuda|auto
+#   OMNIFLOW_CUDA_CHANNEL=cu128|cu126|cu124
+#   TORCH_CUDA_INDEX=https://download.pytorch.org/whl/cu128
 
-# Mac/CPU fallback
-openai-whisper
-pyannote.audio
-torch
+-r requirements-core.txt
 
-# MOSS-Transcribe-Diarize backend (ASR + diarization)
-moss-transcribe-diarize
-
-# Common dependencies
-sounddevice
-numpy
-rich
-tqdm
-pydantic
+# Optional: only if you already installed the right torch for your arch,
+# or you are on macOS where PyPI torch is correct:
+#   pip install "torch>=2.2" "torchaudio>=2.2"
