@@ -113,7 +113,7 @@ function Ensure-Rust {
 
 function Ensure-BuildTools {
   # Check for link.exe / cl.exe rough presence
-  if (Test-Cmd "cl" -or Test-Cmd "link") {
+  if ((Test-Cmd "cl") -or (Test-Cmd "link")) {
     Write-Host "    C++ build tools appear present"
     return
   }
