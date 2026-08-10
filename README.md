@@ -13,77 +13,77 @@
 
 ## Quick start — open the app (Mac / Windows / Linux)
 
-Goal: clone → install runtime once → **launch Diary**.
+Goal: clone → **one script** installs missing host tools + Omniflow runtime → **Diary opens**.
 
-### Prerequisites
+### Easiest path (recommended)
 
-| Tool | Why |
-|------|-----|
-| **Git** | Clone + install the MOSS package (git dependency) |
-| **Python 3.11+** (3.12 recommended) | Local daemon / STT runtime |
-| **Node.js 20+** and **pnpm** | Tauri frontend |
-| **Rust** ([rustup](https://rustup.rs/)) | Tauri shell |
-| Disk + network | First model download is large |
+**Windows (PowerShell)** — needs [winget](https://learn.microsoft.com/windows/package-manager/winget/) (comes with modern Win10/11):
 
-**macOS:** Xcode Command Line Tools (`xcode-select --install`).  
-**Windows:** [VS C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/), WebView2 (usually already installed on Win10/11).  
-**NVIDIA (optional):** drivers for faster inference; otherwise CPU works (slower).
+```powershell
+# If scripts are blocked for this session:
+Set-ExecutionPolicy -Scope Process Bypass
 
-### 1. Clone
-
-```bash
 git clone https://github.com/Hahkeye/omniflow.git
 cd omniflow
+
+# Installs Git/Python/Node/Rust if missing, creates .venv, launches Diary
+.\scripts\get-started.ps1 -CpuOnly
+
+# First compile on a clean PC (adds VS C++ Build Tools — large, once):
+# .\scripts\get-started.ps1 -CpuOnly -WithBuildTools
 ```
-
-### 2. Launch Diary (recommended)
-
-One script installs the Python venv if needed, sets `DIARY_PROJECT_ROOT` / `DIARY_PYTHON`, runs a quick doctor check, and starts Tauri.
 
 **macOS / Linux**
 
 ```bash
-# First time (or after a clean clone): include --setup
-bash scripts/launch-diary.sh --setup
+git clone https://github.com/Hahkeye/omniflow.git
+cd omniflow
 
-# Later sessions
+# Uses brew / apt / dnf + rustup when possible
+OMNIFLOW_TORCH=cpu bash scripts/get-started.sh
+
+# macOS without Xcode CLT yet:
+# bash scripts/get-started.sh --with-xcode
+```
+
+What `get-started` does for you:
+
+1. **`bootstrap-tools`** — Git, Python 3.12, Node LTS, pnpm, Rust (rustup)  
+2. **`launch-diary -Setup`** — Omniflow `.venv` + torch + deps, then `pnpm tauri dev`
+
+You still need a working package manager (`winget` / Homebrew / apt) and network.  
+**Windows first Tauri compile** needs C++ build tools once; pass `-WithBuildTools` or install [VS Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) manually.
+
+### Later sessions (already installed)
+
+```bash
 bash scripts/launch-diary.sh
 ```
 
-**Windows (PowerShell)**
-
 ```powershell
-# If scripts are blocked for this session:
-# Set-ExecutionPolicy -Scope Process Bypass
-
-# First time
-.\scripts\launch-diary.ps1 -Setup
-
-# Later sessions
 .\scripts\launch-diary.ps1
 ```
 
-CPU-only install (safe smoke test):
+Missing tools are auto-detected and bootstrap is re-run when needed.
+
+### Optional: CUDA / CPU / tools-only
 
 ```bash
-OMNIFLOW_TORCH=cpu bash scripts/launch-diary.sh --setup
-```
+# CUDA (Linux / Windows NVIDIA)
+OMNIFLOW_TORCH=cuda OMNIFLOW_CUDA_CHANNEL=cu128 bash scripts/get-started.sh
 
-```powershell
-$env:OMNIFLOW_TORCH = 'cpu'
-.\scripts\launch-diary.ps1 -Setup
-```
-
-CUDA (Windows/Linux NVIDIA):
-
-```bash
-OMNIFLOW_TORCH=cuda OMNIFLOW_CUDA_CHANNEL=cu128 bash scripts/launch-diary.sh --setup
+# Tools only (no app launch)
+bash scripts/bootstrap-tools.sh --status
+bash scripts/bootstrap-tools.sh --yes
 ```
 
 ```powershell
 $env:OMNIFLOW_TORCH = 'cuda'
 $env:OMNIFLOW_CUDA_CHANNEL = 'cu128'
-.\scripts\launch-diary.ps1 -Setup
+.\scripts\get-started.ps1
+
+.\scripts\bootstrap-tools.ps1 -Status
+.\scripts\bootstrap-tools.ps1 -Yes -WithBuildTools
 ```
 
 First Rust compile can take several minutes. When the window opens, use **Record** (or import audio) — the app starts the Python daemon automatically.
@@ -221,8 +221,9 @@ python -m diary_app.ui
 ```
 omniflow/
 ├── scripts/
-│   ├── launch-diary.sh      # macOS / Linux — product entry
-│   └── launch-diary.ps1     # Windows — product entry
+│   ├── get-started.sh / .ps1       # one-shot: tools + venv + Diary
+│   ├── bootstrap-tools.sh / .ps1   # Git/Python/Node/Rust (host)
+│   └── launch-diary.sh / .ps1      # product entry (venv + Tauri)
 ├── diary-frontend/          # Tauri + React (product UI)
 ├── diary_app/
 │   ├── services/            # pipeline + SessionService

@@ -3,9 +3,12 @@
 #
 # Usage (from repo root or anywhere):
 #   bash scripts/launch-diary.sh
-#   bash scripts/launch-diary.sh --setup     # bootstrap venv first
-#   bash scripts/launch-diary.sh --build     # production bundle instead of dev
+#   bash scripts/launch-diary.sh --setup            # bootstrap venv first
+#   bash scripts/launch-diary.sh --bootstrap-tools  # install Git/Python/Node/Rust if missing
+#   bash scripts/launch-diary.sh --build
 #   OMNIFLOW_TORCH=cpu bash scripts/launch-diary.sh --setup
+#
+# Easiest first-time path:  bash scripts/get-started.sh
 #
 # Sets DIARY_PROJECT_ROOT + DIARY_PYTHON so the shell can start the daemon.
 set -euo pipefail
@@ -15,12 +18,14 @@ cd "$ROOT"
 
 DO_SETUP=0
 DO_BUILD=0
+DO_BOOT_TOOLS=0
 for arg in "$@"; do
   case "$arg" in
     --setup|-s) DO_SETUP=1 ;;
     --build|-b) DO_BUILD=1 ;;
+    --bootstrap-tools|--tools|-t) DO_BOOT_TOOLS=1 ;;
     --help|-h)
-      sed -n '2,12p' "$0" | sed -n 's/^# \{0,1\}//p'
+      sed -n '2,14p' "$0" | sed -n 's/^# \{0,1\}//p'
       exit 0
       ;;
     *)
@@ -32,6 +37,38 @@ done
 
 echo "==> Omniflow desktop launch"
 echo "    root: $ROOT"
+
+# shellcheck disable=SC1091
+[[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
+export PATH="${HOME}/.cargo/bin:${PATH}"
+
+need_tools=0
+for c in git python3 node cargo; do
+  if ! command -v "$c" >/dev/null 2>&1; then
+    need_tools=1
+    break
+  fi
+done
+if ! command -v pnpm >/dev/null 2>&1; then
+  need_tools=1
+fi
+
+if [[ "$DO_BOOT_TOOLS" -eq 1 ]] || [[ "$need_tools" -eq 1 ]]; then
+  if [[ "$need_tools" -eq 1 && "$DO_BOOT_TOOLS" -ne 1 ]]; then
+    echo ""
+    echo "Missing host tools (git / python3 / node / pnpm / cargo)."
+    echo "Running bootstrap-tools (installs via brew/apt/dnf + rustup when possible)…"
+  fi
+  bash "$ROOT/scripts/bootstrap-tools.sh" --yes || {
+    echo "ERROR: host tools still incomplete. Fix with:" >&2
+    echo "  bash scripts/bootstrap-tools.sh --status" >&2
+    echo "  bash scripts/bootstrap-tools.sh" >&2
+    exit 1
+  }
+  # shellcheck disable=SC1091
+  [[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
+  export PATH="${HOME}/.cargo/bin:${PATH}"
+fi
 
 # ── Python runtime ────────────────────────────────────────────────────────────
 if [[ "$DO_SETUP" -eq 1 ]] || [[ ! -d "$ROOT/.venv" ]]; then
@@ -73,11 +110,11 @@ fi
 
 # ── Frontend / Tauri toolchain ────────────────────────────────────────────────
 if ! command -v pnpm >/dev/null 2>&1; then
-  echo "ERROR: pnpm not found. Install Node.js 20+ then:  npm install -g pnpm" >&2
+  echo "ERROR: pnpm not found after bootstrap. Try: corepack enable && corepack prepare pnpm@latest --activate" >&2
   exit 1
 fi
 if ! command -v cargo >/dev/null 2>&1; then
-  echo "ERROR: Rust/cargo not found. Install from https://rustup.rs/" >&2
+  echo "ERROR: cargo not found after bootstrap. Install Rust: https://rustup.rs/" >&2
   exit 1
 fi
 
@@ -90,7 +127,6 @@ fi
 echo ""
 if [[ "$DO_BUILD" -eq 1 ]]; then
   echo "==> pnpm tauri build"
-  echo "    (DIARY_* env vars are baked into this shell for the build process)"
   exec pnpm tauri build
 else
   echo "==> pnpm tauri dev"
