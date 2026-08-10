@@ -27,6 +27,28 @@ fn home_dir() -> Option<PathBuf> {
         .map(PathBuf::from)
 }
 
+fn looks_like_project_root(dir: &Path) -> bool {
+    dir.join("diary_app").join("main.py").exists()
+        || dir.join("diary_app").join("__main__.py").exists()
+}
+
+/// Walk parents looking for the Omniflow checkout (contains diary_app/).
+fn find_project_root_from(start: &Path) -> Option<PathBuf> {
+    let mut cur = Some(start.to_path_buf());
+    for _ in 0..10 {
+        if let Some(ref dir) = cur {
+            if looks_like_project_root(dir) {
+                return Some(dir.clone());
+            }
+            // also check parent of diary-frontend/src-tauri/target/...
+            cur = dir.parent().map(|p| p.to_path_buf());
+        } else {
+            break;
+        }
+    }
+    None
+}
+
 fn project_root() -> PathBuf {
     if let Ok(p) = env::var("DIARY_PROJECT_ROOT") {
         return PathBuf::from(p);
@@ -34,40 +56,69 @@ fn project_root() -> PathBuf {
     if let Ok(p) = env::var("OMNIFLOW_ROOT") {
         return PathBuf::from(p);
     }
+    // Prefer cwd (dev: usually repo root or diary-frontend)
+    if let Ok(cwd) = env::current_dir() {
+        if let Some(root) = find_project_root_from(&cwd) {
+            return root;
+        }
+        if let Some(root) = find_project_root_from(&cwd.join("..")) {
+            return root.canonicalize().unwrap_or(root);
+        }
+    }
     if let Ok(exe) = env::current_exe() {
-        let mut cur = exe.parent().map(|p| p.to_path_buf());
-        for _ in 0..8 {
-            if let Some(ref dir) = cur {
-                if dir.join("diary_app").join("main.py").exists() {
-                    return dir.clone();
-                }
-                let up = dir.join("..");
-                if up.join("diary_app").join("main.py").exists() {
-                    return up.canonicalize().unwrap_or(up);
-                }
-                cur = dir.parent().map(|p| p.to_path_buf());
+        if let Some(parent) = exe.parent() {
+            if let Some(root) = find_project_root_from(parent) {
+                return root;
             }
         }
     }
+    // Last resort: common local checkout layout (dev machines only)
     if let Some(home) = home_dir() {
-        let candidate = home.join("code").join("omniflow");
-        if candidate.join("diary_app").join("main.py").exists() {
-            return candidate;
+        for candidate in [
+            home.join("code").join("omniflow"),
+            home.join("omniflow"),
+            home.join("src").join("omniflow"),
+        ] {
+            if looks_like_project_root(&candidate) {
+                return candidate;
+            }
         }
     }
     env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
 }
 
+/// Prefer explicit env, then project `.venv`, then system python.
 fn python_bin() -> String {
-    env::var("DIARY_PYTHON")
-        .or_else(|_| env::var("PYTHON"))
-        .unwrap_or_else(|_| {
-            if cfg!(windows) {
-                "python".to_string()
-            } else {
-                "python3".to_string()
-            }
-        })
+    if let Ok(p) = env::var("DIARY_PYTHON") {
+        return p;
+    }
+    let root = project_root();
+    let venv_candidates = if cfg!(windows) {
+        vec![
+            root.join(".venv").join("Scripts").join("python.exe"),
+            root.join("venv").join("Scripts").join("python.exe"),
+        ]
+    } else {
+        vec![
+            root.join(".venv").join("bin").join("python"),
+            root.join(".venv").join("bin").join("python3"),
+            root.join("venv").join("bin").join("python"),
+            root.join("venv").join("bin").join("python3"),
+        ]
+    };
+    for c in venv_candidates {
+        if c.is_file() {
+            return c.to_string_lossy().into_owned();
+        }
+    }
+    if let Ok(p) = env::var("PYTHON") {
+        return p;
+    }
+    if cfg!(windows) {
+        "python".to_string()
+    } else {
+        "python3".to_string()
+    }
 }
 
 fn diary_dir() -> PathBuf {

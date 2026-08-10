@@ -1,6 +1,15 @@
-# Diary Transcript
+# diary_app — runtime toolkit
 
-Record audio, transcribe multi-speaker conversations with diarization, and extract key points / takeaways.
+Python package behind the **Diary** desktop app: daemon, SessionService, STT backends, history, and CLI.
+
+**Daily product path:** open the Tauri GUI via the repo launch scripts (not this CLI):
+
+```bash
+bash scripts/launch-diary.sh          # macOS / Linux
+# .\scripts\launch-diary.ps1         # Windows
+```
+
+This document is for **install, doctor, automation, and debugging**.
 
 **Default model (Mac + PC):** [OpenMOSS-Team/MOSS-Transcribe-Diarize](https://huggingface.co/OpenMOSS-Team/MOSS-Transcribe-Diarize) — end-to-end ASR + speaker diarization in one pass.
 
